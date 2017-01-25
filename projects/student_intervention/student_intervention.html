@@ -12579,9 +12579,30 @@ F1 score for test set: 0.6610.
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer: </strong>
-Widely used in classification algorithms, decision trees are simple representations of knowledge, and an efficient way of constructing classifiers that predict or reveal useful classes or information based on the attribute values of a dataset. Decision trees take as input a situation described by a set of attributes and returns a decision, which is the predicted value for the input value.</p>
-<p>A decision tree structure consists of a root node, test nodes, and decision nodes (leaves). The root node is the main node in a decision tree. After the root node, each test node splits the data into further parts according to some set criteria. The final node is the leaf node. Thus, the entire dataset is classified by navigating from the root node of the tree decision tree down to the leaf, according to the set criteria's.
-<a href="https://www.quantinsti.com/blog/understanding-decision-trees/">https://www.quantinsti.com/blog/understanding-decision-trees/</a></p>
+A decision tree represents a function that takes as input a vector of attribute values and returns a decision - a unique output value. Input and output values can be discrete or continuous. A decision tree reaches its decision by running a test sequence. Each inner tree node corresponds to a test on one of the input attributes, and the node branches are sorted with the possible values of the attribute. Each leaf node in the tree specifies the value to be returned by the function. Summarizing, the decision tree representation:</p>
+<ul>
+<li>Each internal node tests an attribute;</li>
+<li>Each branch corresponds to attribute value;</li>
+<li>Each leaf node assigns a classification.</li>
+</ul>
+<p>For example, we will construct a decision tree to decide whether to wait or not for a table in a restaurant. Here, the goal is to learn a definition for the target Wait. First, we will list the attributes that we consider as part of the entry:</p>
+<ol>
+<li>Alternate: is there an alternative restaurant nearby?</li>
+<li>Bar: is there a comfortable bar area to wait in?</li>
+<li>Fri/Sat: is today Friday or Saturday?</li>
+<li>Hungry: are we hungry?</li>
+<li>Patrons: number of people in the restaurant (None, Some, Full)</li>
+<li>Price: price range (<code>$</code>, <code>$$</code>, <code>$$$</code>)</li>
+<li>Raining: is it raining outside?</li>
+<li>Reservation: have we made a reservation?</li>
+<li>Type: kind of restaurant (French, Italian, Thai, Burger)</li>
+<li>WaitEstimate: estimated waiting time (0-10, 10-30, 30-60, &gt;60)</li>
+</ol>
+<p><img src="dt.png"></p>
+<p>The figure above, show us a decision tree for  Wait? based on personal “rules of thumb”. The examples are processed by the tree from the root and following the appropriate branch until a leaf is reached. For example, a situation with Patrons = Full and WaitEstimae = 0-10 will be classified as positive (it means, we will wait for a table). In a decision tree, knowledge is represented by each node that, when tested, can lead the search to one of its children. Thus, by descending from the root towards the leaves of the tree, we can select the system configuration, and thus the associated behavior. But how is this tree generated? The answer is from domain case examples. The table below illustrates some examples of domain cases for the problem of waiting for a table.</p>
+<p><img src="it.png"></p>
+<p>The big question of this approach is how the tree can be generated, that is, how to choose the most important rules and what rules can be discarded from the tree. So, the ideal way is that the tree has the most important rules next to the ones that best classify the input. With this, it is expected to solve the problem by applying the fewest number of rules. This task can be done by several algorithms (ID3, C4.5, CART).</p>
+<p>Reference: Artificial Intelligence: A Modern Approach, 3rd Edition - Stuart Russell, Peter Norvig - 2010</p>
 
 </div>
 </div>
@@ -12612,7 +12633,7 @@ Widely used in classification algorithms, decision trees are simple representati
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="prompt input_prompt">In&nbsp;[17]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython2"><pre><span></span><span class="c1"># TODO: Import &#39;GridSearchCV&#39; and &#39;make_scorer&#39;</span>
@@ -12655,7 +12676,7 @@ Widely used in classification algorithms, decision trees are simple representati
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>{&#39;presort&#39;: True, &#39;splitter&#39;: &#39;best&#39;, &#39;min_samples_leaf&#39;: 16, &#39;random_state&#39;: 25, &#39;criterion&#39;: &#39;gini&#39;, &#39;min_samples_split&#39;: 1, &#39;max_depth&#39;: 2}
-Made predictions in 0.0005 seconds.
+Made predictions in 0.0006 seconds.
 Tuned model has a training F1 score of 0.8361.
 Made predictions in 0.0002 seconds.
 Tuned model has a testing F1 score of 0.7808.
