@@ -23,7 +23,7 @@ parser.add_argument("-b", "--bucket", type=int, default=27000, help="The size of
 parser.add_argument("-Q", "--qlimit", type=int, default=None ,help="The size of the ONU port queue in bytes")
 parser.add_argument("-m", "--maxgrant", type=float, default=0, help="The maximum size of buffer which a grant can allow")
 parser.add_argument("-d","--distance", type=int, default=100, nargs='?', help="Distance in km from ONU to OLT")
-parser.add_argument("-e","--exponent", type=int, default=116, nargs='?', help="Packet arrivals distribution exponent")
+parser.add_argument("-e","--exponent", type=int, default=2320, nargs='?', help="Packet arrivals distribution exponent")
 parser.add_argument("-s","--seed", type=int, default=20, help="Random seed")
 parser.add_argument("-w","--window", type=int, default=20, help="PD-DBA window")
 parser.add_argument("-p","--predict", type=int, default=20, help="PD-DBA predictions")
@@ -481,33 +481,6 @@ class PD_DBA(DBA):
         for i in range(NUMBER_OF_ONUs):
             self.grant_history[i] = {'counter': [], 'start': [], 'end': []}
 
-    def predictions_schedule(self,predictions):
-        if len(self.predictions_array) > 0:
-            self.predictions_array = filter(lambda x: x[0] > self.env.now, self.predictions_array)
-        self.predictions_array +=  predictions
-        self.predictions_array.sort()
-        j = 1
-        for interval1 in self.predictions_array[:-1]:
-            for interval2 in self.predictions_array[j:]:
-                if interval1[1] > interval2[0]:
-                    if interval1 in predictions:
-                        index1 = self.predictions_array.index(interval1)
-                        index2 = predictions.index(interval1)
-                        new_interval = [ interval1[0] , interval2[0] - self.guard_interval ]
-                        predictions[ index2 ] = new_interval
-                        self.predictions_array[index1] = new_interval
-
-                    else:
-                        index1 = self.predictions_array.index(interval2)
-                        index2 = predictions.index(interval2)
-                        new_interval = [ interval1[1] + self.guard_interval, interval2[1] ]
-                        predictions[ index2 ] = new_interval
-                        self.predictions_array[index1] = new_interval
-                else:
-                    break
-            j+=1
-        return predictions
-
 
     def predictor(self, ONU_id):
         #yield self.env.timeout(0.0000000000001)
@@ -516,11 +489,11 @@ class PD_DBA(DBA):
             df_tmp = pd.DataFrame(self.grant_history[ONU_id])
             X_pred = np.arange(self.grant_history[ONU_id]['counter'][-1] +1, self.grant_history[ONU_id]['counter'][-1] + 1 + self.predict).reshape(-1,1)
             #predicting start time
-            reg = linear_model.LinearRegression()
+            #reg = linear_model.LinearRegression()
+            reg = linear_model.Ridge(alpha=.5)
             reg.fit( np.array( df_tmp['counter'] ).reshape(-1,1) , df_tmp['start'] )
             start_pred = reg.predict(X_pred)
             #predicting end time
-            reg = linear_model.LinearRegression()
             reg.fit( np.array( df_tmp['counter'] ).reshape(-1,1) , df_tmp['end'] )
             end_pred = reg.predict(X_pred)
 
@@ -530,7 +503,6 @@ class PD_DBA(DBA):
                 predictions.append( [ start_pred[i], end_pred[i] ] )
 
             #fixing overlap
-            #predictions = self.predictions_schedule(predictions)
             self.predictions = predictions
         else:
             self.predictions = None

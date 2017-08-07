@@ -1,9 +1,7 @@
 #!/bin/bash
 
-for target in "start" "end" 
+
+for model in "ols" "ridge" "lasso"
 do
-   for model in "ols" "ridge" "lasso"
-   do
-      python test_predictor.py $target $model > $target-$model-report.txt &
-   done
+python test_predictor.py $model > $model-report.txt &
 done

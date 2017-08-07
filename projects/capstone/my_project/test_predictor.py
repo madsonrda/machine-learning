@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 from sklearn import linear_model
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error as mse
+from sklearn.multioutput import MultiOutputRegressor
 import time
 import sys
 
 
-def grant_predictor(onu_id,onu_df,window,predict,features,model,target,metric):
+def grant_predictor(onu_id,onu_df,window,predict,features,model,metric):
     index=0
     index_max = 0
 
@@ -24,32 +25,31 @@ def grant_predictor(onu_id,onu_df,window,predict,features,model,target,metric):
         else:
             index_max = len(onu_df)-1
 
-        reg = model
+        reg = MultiOutputRegressor(model)
+
 
 
         if len(features) == 1:
             X_pred = np.array(onu_df[features].iloc[interval:index_max]).reshape(-1,1)
             if len(X_pred) == 0:
                 break
-            reg.fit(np.array( df_tmp[features] ).reshape(-1,1) , df_tmp[target])
+            reg.fit(np.array( df_tmp[features] ).reshape(-1,1) , df_tmp[['start','end']])
         else:
             X_pred = onu_df[features].iloc[interval:index_max]
             if len(X_pred) == 0:
                 break
-            reg.fit(df_tmp[features] , df_tmp[target])
+            reg.fit(df_tmp[features] , df_tmp[['start','end']])
 
         pred = reg.predict(X_pred)
-        Y_true = onu_df[target].iloc[interval:index_max]
-
-        metric_list.append(metric(Y_true, pred))
+        Y_true = onu_df[['start','end']].iloc[interval:index_max]
+        metric_list.append(metric(Y_true, pred,multioutput='uniform_average'))
 
         index += predict
 
     return metric_list
 
 
-target = sys.argv[1]
-model = sys.argv[2]
+model = sys.argv[1]
 windows = [10,20,30]
 predicts = [5,10,15,20]
 #feature = ['timestamp','counter']
@@ -67,19 +67,19 @@ for w in windows:
 
 data = pd.read_csv("data-grant_time.csv")
 for w in windows:
-	for p in predicts:
-		d = {'r2':None,'mse':None}
-		for metric in metrics:
-			result_list = []
-			for onu in data['ONU_id'].unique():
-				onu_df = data[ data['ONU_id'] == onu ][ ['timestamp','counter','start','end'] ]
-				result = grant_predictor(onu,onu_df,w,p,feature,models[model],target,metrics[metric])
-				result_list += result
-			if metric == 'r2':
-				d['r2'] = result_list
-			else:
-				d['mse'] = result_list
-		table['{}-{}'.format(w,p)] = pd.DataFrame(d)
+    for p in predicts:
+        d = {'r2':None,'mse':None}
+        for metric in metrics:
+            result_list = []
+            for onu in data['ONU_id'].unique():
+                onu_df = data[ data['ONU_id'] == onu ][ ['timestamp','counter','start','end'] ]
+                result = grant_predictor(onu,onu_df,w,p,feature,models[model],metrics[metric])
+                result_list += result
+            if metric == 'r2':
+                d['r2'] = result_list
+            else:
+                d['mse'] = result_list
+        table['{}-{}'.format(w,p)] = pd.DataFrame(d)
 
 best_r2 = {'key': "",'r2':float("-inf")}
 best_mse = {'key': "",'mse':float("inf")}
