@@ -9,7 +9,7 @@ import sys
 import argparse
 import logging
 from sklearn import linear_model
-from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error as mse
 import os, errno
 
 #Parsing the inputs arguments
@@ -88,8 +88,8 @@ delay_file.write("ONU_id,delay\n")
 grant_time_file.write("source address,destination address,opcode,timestamp,counter,ONU_id,start,end\n")
 pkt_file.write("size\n")
 
-score_file = open("csv/{}-{}-{}-{}-{}-{}-{}-score.csv".format(DBA_ALGORITHM,NUMBER_OF_ONUs,MAX_BUCKET_SIZE,MAX_GRANT_SIZE,DISTANCE,RANDOM_SEED,EXPONENT),"w")
-score_file.write("r2_start,r2_end\n")
+mse_file = open("csv/{}-{}-{}-{}-{}-{}-{}-mse.csv".format(DBA_ALGORITHM,NUMBER_OF_ONUs,MAX_BUCKET_SIZE,MAX_GRANT_SIZE,DISTANCE,RANDOM_SEED,EXPONENT),"w")
+mse_file.write("mse_start,mse_end\n")
 
 class Cable(object):
     """This class represents the propagation through a cable and the splitter."""
@@ -370,9 +370,9 @@ class ONU(object):
                         logging.debug("{}:Erro in pred_grant_usage".format(self.env.now))
                         break
             if len(pred_grant_usage_report) > 0 and len(pred_grant_usage_report) == len(grant['prediction']):
-                score_start = r2_score(np.array(pred_grant_usage_report)[:,0],np.array(grant['prediction'])[:,0])
-                score_end = r2_score(np.array(pred_grant_usage_report)[:,1],np.array(grant['prediction'])[:,1])
-                score_file.write("{},{}\n".format(score_start,score_end))
+                mse_start = mse(np.array(pred_grant_usage_report)[:,0],np.array(grant['prediction'])[:,0])
+                mse_end = mse(np.array(pred_grant_usage_report)[:,1],np.array(grant['prediction'])[:,1])
+                mse_file.write("{},{}\n".format(mse_start,mse_end))
             yield self.env.timeout(self.delay)
             yield self.grant_report_store.put(pred_grant_usage_report)#Signals the end of grant processing
 
@@ -594,4 +594,4 @@ env.run(until=SIM_DURATION)
 delay_file.close()
 grant_time_file.close()
 pkt_file.close()
-score_file.close
+mse_file.close
