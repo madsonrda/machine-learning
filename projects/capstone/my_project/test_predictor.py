@@ -15,6 +15,7 @@ def grant_predictor(onu_id,onu_df,window,predict,features,model,metric):
     index_max = 0
 
     metric_list = []
+    reg = MultiOutputRegressor(model)
 
     while index+window < len(onu_df):
         interval=index+window
@@ -24,9 +25,6 @@ def grant_predictor(onu_id,onu_df,window,predict,features,model,metric):
             index_max = interval+predict
         else:
             index_max = len(onu_df)-1
-
-        reg = MultiOutputRegressor(model)
-
 
 
         if len(features) == 1:
@@ -58,12 +56,8 @@ models = {'ols': linear_model.LinearRegression(),'ridge': linear_model.Ridge(alp
 metrics = {'r2': r2_score,'mse': mse}
 
 
-table = {}
-
-for w in windows:
-    for p in predicts:
-        table['{}-{}'.format(w,p)] = None
-
+best_r2 = {'key': "",'r2':float("-inf")}
+best_mse = {'key': "",'mse':float("inf")}
 
 data = pd.read_csv("data-grant_time.csv")
 for w in windows:
@@ -79,22 +73,17 @@ for w in windows:
                 d['r2'] = result_list
             else:
                 d['mse'] = result_list
-        table['{}-{}'.format(w,p)] = pd.DataFrame(d)
+        df = pd.DataFrame(d)
+        print('w={},p={}'.format(w,p))
+        print df.describe()
+        print ""
+        if df['r2'].mean() > best_r2['r2']:
+    		best_r2['key'] = 'w={},p={}'.format(w,p)
+    		best_r2['r2'] = df['r2'].mean()
+    	if df['mse'].mean() < best_mse['mse']:
+    		best_mse['key'] = 'w={},p={}'.format(w,p)
+    		best_mse['mse'] = df['mse'].mean()
 
-best_r2 = {'key': "",'r2':float("-inf")}
-best_mse = {'key': "",'mse':float("inf")}
-
-
-for k in table:
-	print k
-	print table[k].describe()
-	print ""
-	if table[k]['r2'].mean() > best_r2['r2']:
-		best_r2['key'] = k
-		best_r2['r2'] = table[k]['r2'].mean()
-	if table[k]['mse'].mean() < best_mse['mse']:
-		best_mse['key'] = k
-		best_mse['mse'] = table[k]['mse'].mean()
 
 print "best r2 = {}".format(best_r2)
 print "best mse = {}".format(best_mse)
