@@ -1,23 +1,27 @@
 #!/bin/bash
 
 # To do a complete test: uncomment the line below
-for seed in 20 30 40 50 60 70 80 90 100 110
+#for seed in 20 30 40 50 60 70 80 90 100 110
 # To do a FAST test: uncomment the line below
-#for seed in 20
+for seed in 20
 do
-   for exp in 1160 1450 1740 2030 2320 2610 2900 3190 3480 3770 4060 4350
+   for exp in 1160 1450 1740 2030 2320 2610
    do
       python g-sim.py pd_dba -O 3 -s $seed -e $exp -w 10 -p 5 -M ols &
    done
    sleep 100
-done
+   for exp in 2900 3190 3480 3770 4060 4350
+   do
+      python g-sim.py pd_dba -O 3 -s $seed -e $exp -w 10 -p 5 -M ols &
+   done
+   sleep 100
 
-# To do a complete test: uncomment the line below
-for seed in 20 30 40 50 60 70 80 90 100 110
-# To do a FAST test: uncomment the line below
-#for seed in 20
-do
-   for exp in 1160 1450 1740 2030 2320 2610 2900 3190 3480 3770 4060 4350
+   for exp in 1160 1450 1740 2030 2320 2610
+   do
+      python g-sim.py pd_dba -O 3 -s $seed -e $exp -w 20 -p 20 -M ridge &
+   done
+   sleep 100
+   for exp in 2900 3190 3480 3770 4060 4350
    do
       python g-sim.py pd_dba -O 3 -s $seed -e $exp -w 20 -p 20 -M ridge &
    done

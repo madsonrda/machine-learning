@@ -19,10 +19,11 @@ load = [25,31,37,43,50,56,62,68,75,81,87,93]
 #pkt arrival distribution exponents
 exponents = [1160, 1450, 1740, 2030, 2320, 2610, 2900, 3190, 3480, 3770, 4060, 4350]
 # To do a complete test: uncomment the line below
-seeds = [20,30,40,50,60,70,80,90,100,110] #random seeds
+#seeds = [20,30,40,50,60,70,80,90,100,110] #random seeds
 # To do a FAST test: uncomment the line below
-#seeds = [20]
-parameters = [{'w':10,'p':5},{'w':20,'p':20}]# combinations of the parameters w and p simulated
+seeds = [20]
+parameters = [{'w':10,'p':5}]# combinations of the parameters w and p simulated
+#parameters = [{'w':10,'p':5},{'w':20,'p':20}]# combinations of the parameters w and p simulated
 
 #dictionary to store the delay mean and std by combination of w and p
 for param in parameters:
@@ -60,14 +61,14 @@ plt.xlabel("load (%)")
 plt.ylabel("delay (ms)")
 
 
-plt.errorbar(load, ipact_df.iloc[0],ipact_df.iloc[1],color="k", linestyle='None')
+plt.errorbar(load, ipact_df.iloc[0].values,ipact_df.iloc[1].values,color="k", linestyle='None')
 plt.plot(load, ipact_df.iloc[0], 'o-', color="k",label="IPACT")
 
 
 number = 4
 cmap = plt.get_cmap('gnuplot')
 colors = [cmap(i) for i in np.linspace(0.25, 1, number)]
-print len(colors)
+
 
 for j, param in enumerate(parameters):
     array = np.array([ i for i in pd_dba_df['{}-{}'.format(param['w'],param['p'])].iloc[:] ])
