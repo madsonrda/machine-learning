@@ -10,6 +10,7 @@ import argparse
 import logging
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error as mse
+from sklearn.multioutput import MultiOutputRegressor
 import os, errno
 
 #Parsing the inputs arguments
@@ -447,44 +448,41 @@ class PD_DBA(DBA):
         self.counter = simpy.Resource(self.env, capacity=1)#create a queue of requests to DBA
         self.window = window    # past observations window size
         self.predict = predict # number of predictions
-        self.predictions = None # prediction list
         self.grant_history = range(NUMBER_OF_ONUs) #grant history per ONU (training set)
         for i in range(NUMBER_OF_ONUs):
             # training unit
             self.grant_history[i] = {'counter': [], 'start': [], 'end': []}
+        ##----- Prediction model--------
+        # Uncomment the lines below to change the prediction model
+        #model = linear_model.LinearRegression()
+        # Comment either the line above OR the line below
+        model = linear_model.Ridge(alpha=.5)
+        ##------------------------------
+        self.model = MultiOutputRegressor(model)
 
 
     def predictor(self, ONU_id):
         # check if there's enough observations to fill window
-        if len( self.grant_history[ONU_id]['start'] ) > self.window :
+
+        if len( self.grant_history[ONU_id]['start'] ) >= self.window :
+            #reduce the grant history to the window size
+            self.grant_history[ONU_id]['start'] = self.grant_history[ONU_id]['start'][-self.window:]
+            self.grant_history[ONU_id]['end'] = self.grant_history[ONU_id]['end'][-self.window:]
+            self.grant_history[ONU_id]['counter'] = self.grant_history[ONU_id]['counter'][-self.window:]
             df_tmp = pd.DataFrame(self.grant_history[ONU_id]) # temp dataframe w/ past grants
-            # selecting predicting features
+            # create a list of the next p Grants that will be predicted
             X_pred = np.arange(self.grant_history[ONU_id]['counter'][-1] +1, self.grant_history[ONU_id]['counter'][-1] + 1 + self.predict).reshape(-1,1)
-            #predicting start time
 
-            ##----- Prediction model--------
-            # Uncomment the lines below to change the prediction model
-            #reg = linear_model.LinearRegression()
-            # Comment either the line above OR the line below
-            reg = linear_model.Ridge(alpha=.5)
-            ##------------------------------
+            # model fitting
+            self.model.fit( np.array( df_tmp['counter'] ).reshape(-1,1) , df_tmp[['start','end']] )
+            pred = self.model.predict(X_pred) # predicting start and end
 
-            # model fitting start
-            reg.fit( np.array( df_tmp['counter'] ).reshape(-1,1) , df_tmp['start'] )
-            start_pred = reg.predict(X_pred) # predicting start point
+            predictions = list(pred)
 
-            # model fitting end
-            reg.fit( np.array( df_tmp['counter'] ).reshape(-1,1) , df_tmp['end'] )
-            end_pred = reg.predict(X_pred) #predicting end point
+            return predictions
 
-            #merging start_pred and end_pred
-            predictions = []
-            for i in range(len(start_pred)):
-                predictions.append( [ start_pred[i], end_pred[i] ] )
-
-            self.predictions = predictions
         else:
-            self.predictions = None
+            return  None
 
 
     def dba(self,ONU,buffer_size):
@@ -494,13 +492,12 @@ class PD_DBA(DBA):
             time_stamp = self.env.now
             delay = ONU.delay
 
-
             if len(ONU.grant_report) > 0:
                 # if predictions where utilized, update history with real grant usage
                 for report in ONU.grant_report:
                     self.grant_history[ONU.oid]['start'].append(report[0])
                     self.grant_history[ONU.oid]['end'].append(report[1])
-                    self.grant_history[ONU.oid]['counter'].append( len( self.grant_history[ONU.oid]['start'] ) )
+                    self.grant_history[ONU.oid]['counter'].append( self.grant_history[ONU.oid]['counter'][-1] + 1  )
 
             # check if max grant size is enabled
             if self.max_grant_size > 0 and buffer_size > self.max_grant_size:
@@ -513,11 +510,14 @@ class PD_DBA(DBA):
             # Update grant history with grant requested
             self.grant_history[ONU.oid]['start'].append(self.env.now)
             self.grant_history[ONU.oid]['end'].append(grant_final_time)
-            self.grant_history[ONU.oid]['counter'].append( len( self.grant_history[ONU.oid]['start'] ) )
+            if len(self.grant_history[ONU.oid]['counter']) > 0:
+                self.grant_history[ONU.oid]['counter'].append( self.grant_history[ONU.oid]['counter'][-1] + 1  )
+            else:
+                self.grant_history[ONU.oid]['counter'].append( 1 )
 
             #PREDICTIONS
-            self.predictor(ONU.oid) # start predictor process
-            prediction = self.predictions
+            prediction = self.predictor(ONU.oid) # start predictor process
+
 
             #grant_time_file.write( "{},{},{}\n".format(ONU.oid,self.env.now,grant_final_time) )
             # construct grant message
