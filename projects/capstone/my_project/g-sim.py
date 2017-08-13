@@ -27,6 +27,7 @@ parser.add_argument("-e","--exponent", type=int, default=2320, nargs='?', help="
 parser.add_argument("-s","--seed", type=int, default=20, help="Random seed")
 parser.add_argument("-w","--window", type=int, default=20, help="PD-DBA window")
 parser.add_argument("-p","--predict", type=int, default=20, help="PD-DBA predictions")
+parser.add_argument("-M","--model", type=str, default='ols', choices=["ols","ridge"] ,help="PD-DBA prediction model")
 parser.add_argument("-o", "--output", type=str, default=None, help="Output file name")
 args = parser.parse_args()
 
@@ -42,6 +43,7 @@ FILENAME = args.output
 RANDOM_SEED = args.seed
 WINDOW = args.window
 PREDICT = args.predict
+MODEL = args.model
 
 
 
@@ -443,7 +445,7 @@ class IPACT(DBA):
 
 
 class PD_DBA(DBA):
-    def __init__(self,env,max_grant_size,grant_store,window=20,predict=5):
+    def __init__(self,env,max_grant_size,grant_store,window=20,predict=5,model="ols"):
         DBA.__init__(self,env,max_grant_size,grant_store)
         self.counter = simpy.Resource(self.env, capacity=1)#create a queue of requests to DBA
         self.window = window    # past observations window size
@@ -452,13 +454,13 @@ class PD_DBA(DBA):
         for i in range(NUMBER_OF_ONUs):
             # training unit
             self.grant_history[i] = {'counter': [], 'start': [], 'end': []}
-        ##----- Prediction model--------
-        # Uncomment the lines below to change the prediction model
-        #model = linear_model.LinearRegression()
-        # Comment either the line above OR the line below
-        model = linear_model.Ridge(alpha=.5)
-        ##------------------------------
-        self.model = MultiOutputRegressor(model)
+        #Implementing the model
+        if model == "ols":
+            reg = linear_model.LinearRegression()
+        else:
+            reg = linear_model.Ridge(alpha=.5)
+
+        self.model = MultiOutputRegressor(reg)
 
 
     def predictor(self, ONU_id):
@@ -530,12 +532,12 @@ class PD_DBA(DBA):
 
 class OLT(object):
     """Optical line terminal"""
-    def __init__(self,env,odn,max_grant_size,dba,window,predict):
+    def __init__(self,env,odn,max_grant_size,dba,window,predict,model):
         self.env = env
         self.grant_store = simpy.Store(self.env) # grant communication between processes
         #choosing algorithms
         if dba == "pd_dba":
-            self.dba = PD_DBA(self.env, max_grant_size, self.grant_store,window,predict)
+            self.dba = PD_DBA(self.env, max_grant_size, self.grant_store,window,predict,model)
         else:
             self.dba = IPACT(self.env, max_grant_size, self.grant_store)
 
@@ -571,7 +573,7 @@ for i in range(NUMBER_OF_ONUs):
     distance= DISTANCE
     ONU_List.append(ONU(distance,i,env,odn,EXPONENT,ONU_QUEUE_LIMIT,PKT_SIZE,MAX_BUCKET_SIZE))
 
-olt = OLT(env,odn,MAX_GRANT_SIZE,DBA_ALGORITHM,WINDOW,PREDICT)
+olt = OLT(env,odn,MAX_GRANT_SIZE,DBA_ALGORITHM,WINDOW,PREDICT,MODEL)
 logging.info("starting simulator")
 env.run(until=SIM_DURATION)
 delay_file.close()
