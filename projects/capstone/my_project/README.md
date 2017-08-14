@@ -41,23 +41,17 @@ lasso-report.txt  ols-report.txt  ridge-report.txt
 
 ### Run the simulator
 
-The best model is implemented in the class PD_DBA at line 493. Edit this line in g-sim.py if you want to change model.
-
 First simulate the IPACT algorithm:
 
 ```
 $ bash ipact.sh
 ```
 
-Wait almost 30 minutes.
-
 Then, simulate the PD-DBA algorithm:
 
 ```
 $ bash pddba.sh
 ```
-
-Wait almost 30 minutes.
 
 Run the following command to plot the delay chart into directory img:
 
@@ -70,4 +64,4 @@ $ ls img
 Delay-LR-PON with 3 ONUs.png
 ```
 
-'
+*Warning*: To simulate using 10 different random seeds you should edit the files ipact.sh, pddba.sh and delay_plot.py, uncommenting the indicated lines. The complete simulations can take more than 1 hour.
